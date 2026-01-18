@@ -90,8 +90,9 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 Create a `.env.local` file:
 
 ```env
-# Optional: Add API keys for enhanced features
+# Add API keys for enhanced features
 GEMINI_API_KEYS=your_gemini_key  # For AI-powered features
+NEXT_PUBLIC_LIVEBLOCKS_PUBLIC_KEY=your_public_liveblocks_api # For Room
 ```
 
 ## 📁 Project Structure
