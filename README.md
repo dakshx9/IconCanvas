@@ -1,5 +1,7 @@
 # 🎨 IconCanvas AI
 
+**Live Web:** https://icon-canvas.vercel.app/
+
 > **A powerful, collaborative icon design and canvas editor built for United Hacks V6**
 
 ![Next.js](https://img.shields.io/badge/Next.js-16.0-black?style=flat-square&logo=next.js)
