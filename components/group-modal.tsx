@@ -30,7 +30,8 @@ export function GroupModal({ isOpen, onClose }: GroupModalProps) {
         }
         createGroup(groupName.trim(), memberName.trim())
         toast.success("Group created!")
-        setMode("menu")
+        // setMode("menu") - Removed to show Connected view
+
     }
 
     const handleJoinGroup = () => {
@@ -41,6 +42,9 @@ export function GroupModal({ isOpen, onClose }: GroupModalProps) {
         const success = joinGroup(teamCode.trim().toUpperCase(), memberName.trim())
         if (success) {
             toast.success("Joined group!")
+            // Keep modal open to confirm or let user close
+            // setMode("menu") // Remove this too if we want them to see the group info immediately upon joining?
+            // Usually joining is fast.
             setMode("menu")
         } else {
             toast.error("Group not found. Check the code and try again.")
