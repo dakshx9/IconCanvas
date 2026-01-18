@@ -13,7 +13,7 @@ const features = [
   { icon: Pencil, title: "Draw Anything", description: "Sketch ideas" },
   { icon: Sparkles, title: "AI Search", description: "AI finds icons" },
   { icon: Search, title: "Manual Search", description: "200k+ icons" },
-  { icon: Layers, title: "Compose", description: "Style & arrange" },
+  { icon: MessageSquare, title: "Chat", description: "Collab, Chat and Work Together" },
 ]
 
 export function WelcomeOverlay({ onClose }: WelcomeOverlayProps) {
