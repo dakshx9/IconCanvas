@@ -398,7 +398,7 @@ export const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(({
               onTouchStart={startDrawing}
               onTouchMove={draw}
               onTouchEnd={stopDrawing}
-              className="relative z-10 rounded-xl touch-none"
+              className="relative z-10 rounded-xl"
               style={{ cursor: getCursor(), width: "100%", height: "100%" }}
             />
 
