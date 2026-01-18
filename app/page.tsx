@@ -133,6 +133,7 @@ export default function Home() {
           mobileView={mobileView}
           onMobileViewChange={setMobileView}
           isMobile={isMobile}
+          onOpenEditor={() => setShowEditor(true)}
         />
 
         {/* Desktop Layout */}
