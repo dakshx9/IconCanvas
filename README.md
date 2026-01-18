@@ -7,7 +7,7 @@
 ![React](https://img.shields.io/badge/React-19.0-61dafb?style=flat-square&logo=react)
 ![TailwindCSS](https://img.shields.io/badge/TailwindCSS-3.4-38bdf8?style=flat-square&logo=tailwindcss)
 
-## 🚀 Overview
+## 🚀 Overview  
 
 **IconCanvas** is a feature-rich, browser-based design tool that combines the power of icon search, canvas editing, and real-time collaboration. Create stunning graphics, presentations, and icon compositions with an intuitive drag-and-drop interface.
 
