@@ -17,9 +17,10 @@ interface HeaderProps {
   mobileView?: "canvas" | "search"
   onMobileViewChange?: (view: "canvas" | "search") => void
   isMobile?: boolean
+  onOpenEditor?: () => void
 }
 
-export function Header({ onClear, iconCount, mobileView, onMobileViewChange, isMobile }: HeaderProps) {
+export function Header({ onClear, iconCount, mobileView, onMobileViewChange, isMobile, onOpenEditor }: HeaderProps) {
   const { setTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
   const [showGroupModal, setShowGroupModal] = useState(false)
@@ -220,6 +221,19 @@ export function Header({ onClear, iconCount, mobileView, onMobileViewChange, isM
       {/* Actions */}
       <div className="flex items-center gap-1 md:gap-2">
 
+        {/* Open Editor Button (Desktop) */}
+        {!isMobile && onOpenEditor && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onOpenEditor}
+            className="hidden md:flex gap-2 mr-2 bg-secondary/50 hover:bg-secondary/80 border border-border/50"
+          >
+            <Paintbrush className="w-4 h-4" />
+            <span className="text-xs font-medium">Open Editor</span>
+          </Button>
+        )}
+
 
         {mounted && (
           <DropdownMenu>
@@ -268,7 +282,7 @@ export function Header({ onClear, iconCount, mobileView, onMobileViewChange, isM
         <div className="h-5 w-px bg-border mx-0.5 hidden md:block" />
 
         <Button variant="ghost" size="icon" asChild className="w-8 h-8 md:w-9 md:h-9 hidden md:flex">
-          <a href="https://github.com" target="_blank" rel="noopener noreferrer" title="GitHub">
+          <a href="https://github.com/dakshx9/IconCanvas/" target="_blank" rel="noopener noreferrer" title="GitHub">
             <Github className="w-4 h-4" />
           </a>
         </Button>
