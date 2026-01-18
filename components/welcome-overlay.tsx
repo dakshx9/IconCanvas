@@ -2,7 +2,7 @@
 
 import { useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Sparkles, Pencil, Layers, Search, ArrowRight } from "lucide-react"
+import { Sparkles, Pencil, Layers, Search, ArrowRight, MessageCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface WelcomeOverlayProps {
