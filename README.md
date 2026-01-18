@@ -9,12 +9,12 @@
 
 ## 🚀 Overview
 
-**Icony Studio** is a feature-rich, browser-based design tool that combines the power of icon search, canvas editing, and real-time collaboration. Create stunning graphics, presentations, and icon compositions with an intuitive drag-and-drop interface.
+**IconCanvas** is a feature-rich, browser-based design tool that combines the power of icon search, canvas editing, and real-time collaboration. Create stunning graphics, presentations, and icon compositions with an intuitive drag-and-drop interface.
 
 ## ✨ Features
 
 ### 🔍 Smart Icon Search
-- **Iconify Integration**: Access 200,000+ icons from popular icon sets (Material, Lucide, Heroicons, Font Awesome, and more)
+- **Freepik Integration**: Access 200,000+ icons from popular icon sets (Material, Lucide, Heroicons, Font Awesome, and more)
 - **AI-Powered Search**: Intelligent search suggestions to find the perfect icon
 - **Quick Preview**: Hover to preview icons before adding to canvas
 
@@ -56,7 +56,7 @@
 | **Tailwind CSS** | Utility-first styling |
 | **Radix UI** | Accessible UI components |
 | **Framer Motion** | Smooth animations |
-| **Iconify API** | Icon search and retrieval |
+| **Freepik API** | Icon search and retrieval |
 | **JSZip** | Client-side ZIP generation |
 | **Sonner** | Toast notifications |
 
@@ -76,6 +76,9 @@ cd icony-studio
 # Install dependencies
 npm install
 
+# Run build
+npm run build
+
 # Start development server
 npm run dev
 ```
@@ -88,13 +91,13 @@ Create a `.env.local` file:
 
 ```env
 # Optional: Add API keys for enhanced features
-OPENAI_API_KEY=your_openai_key  # For AI-powered features
+GEMINI_API_KEYS=your_gemini_key  # For AI-powered features
 ```
 
 ## 📁 Project Structure
 
 ```
-icony-studio/
+IconCanvas/
 ├── app/                    # Next.js App Router pages
 │   ├── api/               # API routes
 │   │   ├── search-icons/  # Iconify search endpoint
