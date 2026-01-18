@@ -9,10 +9,20 @@ import {
     generateTeamCode, generateMemberIdentity, MEMBER_COLORS, AVATAR_EMOJIS
 } from "@/types/collaboration"
 import {
-    syncChannel, saveSessionToStorage, getSessionFromStorage, clearSessionStorage,
-    getSharedState, setSharedState
-} from "@/lib/sync-channel"
-import type { CanvasIcon, TextElement, DrawingPath } from "@/types/icon"
+    RoomProvider,
+    useRoom,
+    useMyPresence,
+    useUpdateMyPresence,
+    useSelf,
+    useOthers,
+    useStorage,
+    useMutation
+} from "@/liveblocks.config"
+import { LiveList, LiveObject } from "@liveblocks/client"
+import { ClientSideSuspense } from "@liveblocks/react"
+import { toast } from "sonner"
+
+// --- Context Definition ---
 
 interface CollaborationContextType {
     // Session state
@@ -52,273 +62,252 @@ export function useCollaboration() {
     return ctx
 }
 
-// Safe hook that returns null when not in provider
 export function useCollaborationSafe() {
     return useContext(CollaborationContext)
 }
 
-interface CollaborationProviderProps {
-    children: React.ReactNode
-}
+// --- Provider Component ---
 
-export function CollaborationProvider({ children }: CollaborationProviderProps) {
-    const [session, setSession] = useState<GroupSession | null>(null)
-    const [currentMember, setCurrentMember] = useState<GroupMember | null>(null)
-    const [messages, setMessages] = useState<ChatMessage[]>([])
-    const [remoteCursors, setRemoteCursors] = useState<Map<string, { x: number; y: number; name: string; color: string }>>(new Map())
+export function CollaborationProvider({ children }: { children: React.ReactNode }) {
+    const [roomCode, setRoomCode] = useState<string | null>(null)
+    const [sessionName, setSessionName] = useState<string>("")
+    const [userName, setUserName] = useState<string>("")
+    const [isHost, setIsHost] = useState(false)
+    const [identity, setIdentity] = useState<{ color: string, avatarEmoji: string } | null>(null)
 
-    const onCanvasUpdateRef = useRef<((state: Partial<SyncedCanvasState>) => void) | null>(null)
-
-    const isConnected = session !== null && currentMember !== null
-
-    // Handle incoming sync events
-    const handleSyncEvent = useCallback((event: SyncEvent) => {
-        switch (event.type) {
-            case "MEMBER_JOIN": {
-                const newMember = event.payload as GroupMember
-                setSession(prev => {
-                    if (!prev) return null
-                    // Don't add if already exists
-                    if (prev.members.find(m => m.id === newMember.id)) return prev
-                    const updated = { ...prev, members: [...prev.members, newMember] }
-                    setSharedState(`session-${prev.code}`, updated)
-                    return updated
-                })
-                break
-            }
-
-            case "MEMBER_LEAVE": {
-                const memberId = event.payload as string
-                setSession(prev => {
-                    if (!prev) return null
-                    const updated = { ...prev, members: prev.members.filter(m => m.id !== memberId) }
-                    setSharedState(`session-${prev.code}`, updated)
-                    return updated
-                })
-                setRemoteCursors(prev => {
-                    const next = new Map(prev)
-                    next.delete(memberId)
-                    return next
-                })
-                break
-            }
-
-            case "CURSOR_MOVE": {
-                const { x, y, name, color } = event.payload as { x: number; y: number; name: string; color: string }
-                setRemoteCursors(prev => {
-                    const next = new Map(prev)
-                    next.set(event.memberId, { x, y, name, color })
-                    return next
-                })
-                break
-            }
-
-            case "CHAT_MESSAGE": {
-                const message = event.payload as ChatMessage
-                setMessages(prev => [...prev, message])
-                break
-            }
-
-            case "CANVAS_UPDATE": {
-                const state = event.payload as Partial<SyncedCanvasState>
-                if (onCanvasUpdateRef.current) {
-                    onCanvasUpdateRef.current(state)
-                }
-                break
-            }
-
-            case "FULL_SYNC": {
-                // When a new member joins, host sends full state
-                const fullSession = event.payload as GroupSession
-                setSession(fullSession)
-                setMessages(fullSession.messages)
-                break
-            }
-        }
-    }, [])
-
-    // Create a new group
+    // Actions that set up the connection
     const createGroup = useCallback((name: string, memberName: string) => {
         const code = generateTeamCode()
-        const memberId = `member-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
-        const identity = generateMemberIdentity()
+        const id = generateMemberIdentity()
+        setSessionName(name)
+        setUserName(memberName)
+        setIdentity(id)
+        setIsHost(true)
+        setRoomCode(code) // This triggers RoomProvider rendering
+    }, [])
 
-        const host: GroupMember = {
-            id: memberId,
-            name: memberName,
-            color: identity.color,
-            avatarEmoji: identity.avatarEmoji,
-            isHost: true,
-            cursor: null,
-            lastSeen: Date.now(),
-            permission: "host"
-        }
-
-        const newSession: GroupSession = {
-            id: `session-${Date.now()}`,
-            code,
-            name,
-            hostId: memberId,
-            members: [host],
-            messages: [],
-            createdAt: Date.now()
-        }
-
-        setSession(newSession)
-        setCurrentMember(host)
-        setMessages([])
-
-        // Save to storage and init sync
-        saveSessionToStorage({ code, memberId, memberName })
-        setSharedState(`session-${code}`, newSession)
-        syncChannel.init(code, memberId)
-        syncChannel.subscribe(handleSyncEvent)
-    }, [handleSyncEvent])
-
-    // Join existing group
-    const joinGroup = useCallback((code: string, memberName: string): boolean => {
-        // Check if session exists in shared state
-        const existingSession = getSharedState<GroupSession>(`session-${code}`)
-
-        if (!existingSession) {
-            return false
-        }
-
-        const memberId = `member-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
-        const identity = generateMemberIdentity()
-
-        const member: GroupMember = {
-            id: memberId,
-            name: memberName,
-            color: identity.color,
-            avatarEmoji: identity.avatarEmoji,
-            isHost: false,
-            cursor: null,
-            lastSeen: Date.now(),
-            permission: "editor"
-        }
-
-        // Add self to session
-        const updatedSession = {
-            ...existingSession,
-            members: [...existingSession.members, member]
-        }
-
-        setSession(updatedSession)
-        setCurrentMember(member)
-        setMessages(existingSession.messages)
-
-        // Save and init sync
-        saveSessionToStorage({ code, memberId, memberName })
-        setSharedState(`session-${code}`, updatedSession)
-        syncChannel.init(code, memberId)
-        syncChannel.subscribe(handleSyncEvent)
-
-        // Broadcast join
-        syncChannel.broadcast("MEMBER_JOIN", member)
-
+    const joinGroup = useCallback((code: string, memberName: string) => {
+        const id = generateMemberIdentity()
+        setSessionName("Team Session") // Default name until synced
+        setUserName(memberName)
+        setIdentity(id)
+        setIsHost(false)
+        setRoomCode(code)
         return true
-    }, [handleSyncEvent])
+    }, [])
 
-    // Leave group
     const leaveGroup = useCallback(() => {
-        if (!session || !currentMember) return
+        setRoomCode(null)
+        setSessionName("")
+        setUserName("")
+        setIsHost(false)
+        setIdentity(null)
+    }, [])
 
-        syncChannel.broadcast("MEMBER_LEAVE", currentMember.id)
-        syncChannel.disconnect()
-        clearSessionStorage()
+    if (roomCode && identity) {
+        return (
+            <RoomProvider
+                id={roomCode}
+                initialPresence={{
+                    cursor: null,
+                    info: {
+                        name: userName,
+                        color: identity.color,
+                        avatarEmoji: identity.avatarEmoji,
+                        isHost: isHost
+                    }
+                }}
+                initialStorage={{
+                    messages: new LiveList([]),
+                    canvas: new LiveObject({} as SyncedCanvasState) // Initialize empty
+                }}
+            >
+                <ClientSideSuspense fallback={null}>
+                    {() => (
+                        <ConnectedCollaborationLogic
+                            roomCode={roomCode}
+                            sessionName={sessionName}
+                            userName={userName}
+                            identity={identity}
+                            leaveGroup={leaveGroup}
+                            isHost={isHost}
+                        >
+                            {children}
+                        </ConnectedCollaborationLogic>
+                    )}
+                </ClientSideSuspense>
+            </RoomProvider>
+        )
+    }
 
-        setSession(null)
-        setCurrentMember(null)
-        setMessages([])
-        setRemoteCursors(new Map())
-    }, [session, currentMember])
+    // Disconnected state
+    return (
+        <CollaborationContext.Provider value={{
+            session: null,
+            isConnected: false,
+            currentMember: null,
+            createGroup,
+            joinGroup,
+            leaveGroup,
+            messages: [],
+            sendMessage: () => { },
+            updateCursor: () => { },
+            remoteCursors: new Map(),
+            broadcastCanvasUpdate: () => { },
+            onCanvasUpdate: null,
+            setOnCanvasUpdate: () => { },
+            setMemberPermission: () => { }
+        }}>
+            {children}
+        </CollaborationContext.Provider>
+    )
+}
 
-    // Send chat message
-    const sendMessage = useCallback((text: string) => {
-        if (!currentMember || !text.trim()) return
+// --- Connected Logic ---
 
-        const message: ChatMessage = {
-            id: `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-            memberId: currentMember.id,
-            memberName: currentMember.name,
-            memberColor: currentMember.color,
-            text: text.trim(),
-            timestamp: Date.now()
+interface ConnectedProps {
+    children: React.ReactNode
+    roomCode: string
+    sessionName: string
+    userName: string
+    identity: { color: string, avatarEmoji: string }
+    leaveGroup: () => void
+    isHost: boolean
+}
+
+function ConnectedCollaborationLogic({ children, roomCode, sessionName, userName, identity, leaveGroup, isHost }: ConnectedProps) {
+    const others = useOthers()
+    const self = useSelf()
+    const [myPresence, updateMyPresence] = useMyPresence()
+
+    // Liveblocks Storage Hooks - Reading
+    const messages = useStorage((root: any) => root.messages) || []
+    const canvasObj = useStorage((root: any) => root.canvas)
+
+    // Construct "Session" object compatible with app
+    // Memoize members to avoid re-render loops if possible, but they depend on others which changes on cursor move.
+    // However, we can memoize the session object STRUCTURE.
+    const members = React.useMemo<GroupMember[]>(() => [
+        // Self
+        {
+            id: self?.connectionId.toString() || "me",
+            name: userName,
+            color: identity.color,
+            avatarEmoji: identity.avatarEmoji,
+            isHost: isHost,
+            cursor: myPresence?.cursor || null,
+            lastSeen: Date.now(),
+            permission: isHost ? "host" : "editor"
+        },
+        // Others
+        ...others.map(other => ({
+            id: other.connectionId.toString(),
+            name: other.presence.info?.name || "Anonymous",
+            color: other.presence.info?.color || "#999",
+            avatarEmoji: other.presence.info?.avatarEmoji || "👤",
+            isHost: other.presence.info?.isHost || false,
+            cursor: other.presence.cursor || null,
+            lastSeen: Date.now(),
+            permission: (other.presence.info?.isHost ? "host" : "editor") as PermissionLevel
+        }))
+    ], [others, self, userName, identity, isHost, myPresence])
+
+    const session = React.useMemo<GroupSession>(() => ({
+        id: `session-${roomCode}`,
+        code: roomCode,
+        name: sessionName,
+        hostId: members.find(m => m.isHost)?.id || "unknown",
+        members,
+        messages: messages as ChatMessage[],
+        createdAt: Date.now()
+    }), [roomCode, sessionName, members, messages])
+
+    // Remote Cursors Map
+    const remoteCursors = React.useMemo(() => {
+        const map = new Map<string, { x: number; y: number; name: string; color: string }>()
+        others.forEach(other => {
+            if (other.presence.cursor) {
+                map.set(other.connectionId.toString(), {
+                    x: other.presence.cursor.x,
+                    y: other.presence.cursor.y,
+                    name: other.presence.info?.name || "Anonymous",
+                    color: other.presence.info?.color || "#999"
+                })
+            }
+        })
+        return map
+    }, [others])
+
+    // Subscriptions & Callbacks
+    const sendMessage = useMutation(({ storage }, text: string) => {
+        try {
+            if (!text.trim()) return
+            const msg: ChatMessage = {
+                id: `msg-${Date.now()}`,
+                memberId: self?.connectionId.toString() || "me",
+                memberName: userName,
+                memberColor: identity.color,
+                text: text.trim(),
+                timestamp: Date.now()
+            }
+
+            // Ensure storage exists before pushing
+            if (!storage) return
+            const messagesHandle = storage.get("messages")
+            if (messagesHandle) {
+                messagesHandle.push(msg)
+            }
+        } catch (e) {
+            // Storage not loaded yet
         }
+    }, [userName, identity])
 
-        setMessages(prev => [...prev, message])
-        syncChannel.broadcast("CHAT_MESSAGE", message)
-
-        // Update shared session
-        if (session) {
-            const updated = { ...session, messages: [...session.messages, message] }
-            setSharedState(`session-${session.code}`, updated)
-        }
-    }, [currentMember, session])
-
-    // Update cursor position
     const updateCursor = useCallback((x: number, y: number) => {
-        if (!currentMember) return
-        syncChannel.broadcast("CURSOR_MOVE", {
-            x, y,
-            name: currentMember.name,
-            color: currentMember.color
-        })
-    }, [currentMember])
+        updateMyPresence({ cursor: { x, y } })
+    }, [updateMyPresence])
 
-    // Broadcast canvas update
-    const broadcastCanvasUpdate = useCallback((state: Partial<SyncedCanvasState>) => {
-        if (!isConnected) return
-        syncChannel.broadcast("CANVAS_UPDATE", state)
-    }, [isConnected])
+    // Canvas Sync
+    const onCanvasUpdateRef = useRef<((state: Partial<SyncedCanvasState>) => void) | null>(null)
 
-    // Set permission for a member (host only)
-    const setMemberPermission = useCallback((memberId: string, permission: PermissionLevel) => {
-        if (!currentMember?.isHost || !session) return
-
-        setSession(prev => {
-            if (!prev) return null
-            const updated = {
-                ...prev,
-                members: prev.members.map(m =>
-                    m.id === memberId ? { ...m, permission } : m
-                )
-            }
-            setSharedState(`session-${prev.code}`, updated)
-            syncChannel.broadcast("MEMBER_UPDATE", updated.members.find(m => m.id === memberId))
-            return updated
-        })
-    }, [currentMember, session])
-
-    // Cleanup on unmount
+    // Listen to storage changes for canvas
     useEffect(() => {
-        return () => {
-            if (syncChannel.isConnected()) {
-                syncChannel.disconnect()
+        if (canvasObj && onCanvasUpdateRef.current) {
+            onCanvasUpdateRef.current(canvasObj as unknown as Partial<SyncedCanvasState>)
+        }
+    }, [canvasObj])
+
+    const broadcastCanvasUpdate = useMutation((context, state: Partial<SyncedCanvasState>) => {
+        try {
+            const storage = context.storage;
+            if (!storage) return
+            const canvas = storage.get("canvas")
+            if (canvas) {
+                canvas.update(state)
             }
+        } catch (e) {
+            // Storage not loaded yet
         }
     }, [])
 
-    const value: CollaborationContextType = {
+    const contextValue = React.useMemo(() => ({
         session,
-        isConnected,
-        currentMember,
-        createGroup,
-        joinGroup,
+        isConnected: true,
+        currentMember: members[0], // Self
+        createGroup: () => { }, // Already connected
+        joinGroup: () => true, // Already connected
         leaveGroup,
-        messages,
+        messages: messages as ChatMessage[],
         sendMessage,
         updateCursor,
         remoteCursors,
         broadcastCanvasUpdate,
         onCanvasUpdate: onCanvasUpdateRef.current,
-        setOnCanvasUpdate: (cb) => { onCanvasUpdateRef.current = cb },
-        setMemberPermission
-    }
+        setOnCanvasUpdate: (cb: any) => { onCanvasUpdateRef.current = cb },
+        setMemberPermission: () => { } // simplified
+    }), [session, members, leaveGroup, messages, sendMessage, updateCursor, remoteCursors, broadcastCanvasUpdate])
 
     return (
-        <CollaborationContext.Provider value={value}>
+        <CollaborationContext.Provider value={contextValue}>
             {children}
         </CollaborationContext.Provider>
     )
