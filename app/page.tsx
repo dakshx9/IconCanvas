@@ -140,19 +140,6 @@ export default function Home() {
         <div className="hidden lg:flex flex-1 overflow-hidden">
           {/* Drawing Canvas - Left Side */}
           <div className="flex-1 relative flex flex-col">
-            {savedCanvasImage ? (
-              <div className="absolute inset-0 z-10 bg-neutral-900 flex items-center justify-center p-8">
-                <img src={savedCanvasImage} alt="Saved Design" className="max-w-full max-h-full object-contain shadow-2xl border border-neutral-800" />
-                <button
-                  onClick={() => setSavedCanvasImage(null)}
-                  className="absolute top-4 right-4 bg-neutral-800 text-white p-2 rounded-full hover:bg-neutral-700"
-                  title="Close Preview"
-                >
-                  <span className="sr-only">Close</span>
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
-                </button>
-              </div>
-            ) : null}
             <DrawingCanvas
               key={`desktop-${canvasKey}`}
               ref={desktopCanvasRef}
@@ -202,18 +189,6 @@ export default function Home() {
           <div
             className={`absolute inset-0 transition-transform duration-300 touch-none ${mobileView === "canvas" ? "translate-x-0" : "-translate-x-full"}`}
           >
-            {savedCanvasImage ? (
-              <div className="absolute inset-0 z-10 bg-neutral-900 flex items-center justify-center p-4">
-                <img src={savedCanvasImage} alt="Saved Design" className="max-w-full max-h-full object-contain shadow-2xl border border-neutral-800" />
-                <button
-                  onClick={() => setSavedCanvasImage(null)}
-                  className="absolute top-4 right-4 bg-neutral-800 text-white p-2 rounded-full hover:bg-neutral-700"
-                >
-                  <span className="sr-only">Close</span>
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
-                </button>
-              </div>
-            ) : null}
             <DrawingCanvas
               key={`mobile-${canvasKey}`}
               ref={mobileCanvasRef}
@@ -286,7 +261,6 @@ export default function Home() {
             onDeleteIcon={handleDeleteIcon}
             onDuplicateIcon={handleDuplicateIcon}
             onClose={() => setShowEditor(false)}
-            onSave={setSavedCanvasImage}
             isMobile={isMobile}
           />
         )}
