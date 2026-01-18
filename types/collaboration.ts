@@ -20,6 +20,7 @@ export interface ChatMessage {
     memberColor: string
     text: string
     timestamp: number
+    [key: string]: any
 }
 
 export interface GroupSession {
@@ -45,6 +46,7 @@ export interface SyncedCanvasState {
     layerOrder: string[]
     slides: import("./slide").CanvasSlide[]
     currentSlideIndex: number
+    [key: string]: any
 }
 
 // Sync events
