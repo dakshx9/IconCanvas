@@ -70,8 +70,8 @@
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/icony-studio.git
-cd icony-studio
+git clone https://github.com/dakshx9/IconCanvas/
+cd IconCanvas
 
 # Install dependencies
 npm install
